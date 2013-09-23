@@ -43,6 +43,17 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
   }
 
   test("WHILE test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/test3.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (0)
+  }
+
+  test("ASSIGN test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/assign.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (2)
   }
 
   test("toy test") {
@@ -50,6 +61,20 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
     val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/test1.k-")
 
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (3)
+  }
+
+  ignore("fun test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/fun.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get)
+  }
+
+  test("if test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/if.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get)
   }
 
 

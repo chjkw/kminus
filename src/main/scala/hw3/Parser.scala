@@ -53,7 +53,7 @@ class Parser extends JavaTokenParsers with PackratParsers {
 
   /** Rule for an assignment expression */
   lazy val assignmentExpression: PackratParser[EXP] = {
-    ioExpression~":="~assignmentExpression ^^ {
+    identifier~":="~assignmentExpression ^^ {
       case e1~_~e2 => ASSIGN(e1, e2)
     } | ioExpression // Go to the next expression
   }
@@ -139,8 +139,8 @@ class Parser extends JavaTokenParsers with PackratParsers {
 
   /** Rule for a primary expression */
   lazy val primaryExpression: Parser[EXP] = {
-    identifierExpression |
     booleanValue |
+    identifierExpression |
     integerValue |
     unitExpression
   }

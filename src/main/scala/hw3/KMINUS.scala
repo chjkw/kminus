@@ -1,7 +1,6 @@
 package hw3
 
 import com.sun.corba.se.impl.io.TypeMismatchException
-import scala.annotation.tailrec
 
 /**
  * Created with IntelliJ IDEA.
@@ -59,75 +58,52 @@ object KMINUS {
 
   def getAddr() : Int = { this.addr+=1; this.addr }
 
-  def _run(M: Memory, E: Env, P: PROGRAM): (Memory, Env, Value) = {
+  def calc(M: Memory, E: Env, e1: EXP, e2: EXP, op: Char) : (Memory, Env, Value) = {
+    val r1 = runExpr(M, E, e1)
+    val r2 = runExpr(r1._1, r1._2, e2)
+
+    r1._3 match {
+      case Numv(n1) => {
+        r2._3 match {
+          case Numv(n2) => {
+            op match {
+              case '+' => (r2._1, r2._2, Numv(n1 + n2))
+              case '-' => (r2._1, r2._2, Numv(n1 - n2))
+              case '*' => (r2._1, r2._2, Numv(n1 * n2))
+              case '/' => {
+                if(n2 == 0)
+                  throw new ArithmeticException
+                else
+                  (r2._1, r2._2, Numv(n1 / n2))
+              }
+            }
+          }
+        }
+      }
+      case _ => throw new TypeMismatchException
+    }
+  }
+
+  def run(M: Memory, E: Env, P: PROGRAM): Value = {
+    val e = runExpr(M, E, P)
+    e._3
+  }
+
+  def runExpr(M: Memory, E: Env, P: PROGRAM): (Memory, Env, Value) = {
     P match {
       case VAR(x) => (M, E, M(E(x)))
       case TRUE => (M, E, Bool(true))
       case FALSE => (M, E, Bool(false))
       case UNIT => (M, E, Unitv)
       case NUM(n) => (M, E, Numv(n))
-      case ADD(p1, p2) => {
-        val r1 = _run(M, E, p1)
-        val r2 = _run(r1._1, r1._2, p2)
-
-        r1._3 match {
-          case Numv(n1) => {
-            r2._3 match {
-              case Numv(n2) => (r2._1, r2._2, Numv(n1 + n2))
-            }
-          }
-          case _ => throw new TypeMismatchException
-
-        }
-      }
-      case SUB(p1, p2) => {
-        val r1 = _run(M, E, p1)
-        val r2 = _run(r1._1, r1._2, p2)
-
-        r1._3 match {
-          case Numv(n1) => {
-            r2._3 match {
-              case Numv(n2) => (r2._1, r2._2, Numv(n1 - n2))
-            }
-          }
-          case _ => throw new TypeMismatchException
-
-        }
-      }
-      case MUL(p1, p2) => {
-        val r1 = _run(M, E, p1)
-        val r2 = _run(r1._1, r1._2, p2)
-
-        r1._3 match {
-          case Numv(n1) => {
-            r2._3 match {
-              case Numv(n2) => (r2._1, r2._2, Numv(n1 * n2))
-            }
-          }
-          case _ => throw new TypeMismatchException
-
-        }
-      }
-      case DIV(p1, p2) => {
-        val r1 = _run(M, E, p1)
-        val r2 = _run(r1._1, r1._2, p2)
-
-        r1._3 match {
-          case Numv(n1) => {
-            r2._3 match {
-              case Numv(n2) => {
-                if(n2 == 0) throw new ArithmeticException
-                else (r2._1, r2._2, Numv(n1 / n2))
-              }
-            }
-          }
-          case _ => throw new TypeMismatchException
-        }
-      }
+      case ADD(p1, p2) => calc(M, E, p1, p2, '+')
+      case SUB(p1, p2) => calc(M, E, p1, p2, '-')
+      case MUL(p1, p2) => calc(M, E, p1, p2, '*')
+      case DIV(p1, p2) => calc(M, E, p1, p2, '/')
       case EQUAL(e1, e2) => if (run(M, E, e1) == run(M, E, e2)) (M, E, Bool(true)) else (M, E, Bool(false))
       case LESS(e1, e2) => {
-        val r1 = _run(M, E, e1)
-        val r2 = _run(r1._1, r1._2, e2)
+        val r1 = runExpr(M, E, e1)
+        val r2 = runExpr(r1._1, r1._2, e2)
 
         r1._3 match {
           case Numv(n1) =>
@@ -138,30 +114,30 @@ object KMINUS {
         }
       }
       case NOT(e) => {
-        val r = _run(M, E, e)
+        val r = runExpr(M, E, e)
 
         r._3 match {
           case Bool(b) => if(b) (r._1, r._2, Bool(false)) else (r._1, r._2, Bool(true))
         }
       }
       case SEQ(e1, e2) => {
-        val r = _run(M, E, e1)
-        _run(r._1, r._2, e2)
+        val r = runExpr(M, E, e1)
+        runExpr(r._1, r._2, e2)
       }
       case IF(cond, t, e) => {
-        val r = _run(M, E, cond)
+        val r = runExpr(M, E, cond)
         r._3 match {
-          case Bool(b) => if (b == true) _run(r._1, r._2, t) else _run(r._1, r._2, e)
-          case _ => _run(r._1, r._2, e)
+          case Bool(b) => if (b == true) runExpr(r._1, r._2, t) else runExpr(r._1, r._2, e)
+          case _ => runExpr(r._1, r._2, e)
         }
       }
       case WHILE(cond, s) => {
-        val m = _run(M, E, cond)
+        val m = runExpr(M, E, cond)
         m._3 match {
           case Bool(b) => {
             if (b == true) {
-              val r = _run(m._1, m._2, s)
-              _run(r._1, r._2, WHILE(cond, s))
+              val r = runExpr(m._1, m._2, s)
+              runExpr(r._1, r._2, WHILE(cond, s))
             }
             else
               (m._1, m._2, Unitv)
@@ -169,15 +145,15 @@ object KMINUS {
           case _ => (m._1, m._2, Unitv)
         }
       }
-      case ASSIGN(id, v) => (M.updated(E(id), _run(M, E, v)._3), E, Unitv)
+      case ASSIGN(id, v) => (M.updated(E(id), runExpr(M, E, v)._3), E, Unitv)
       case LETV(id, e, s) => {
-        val x = _run(M, E, e)._3
+        val x = runExpr(M, E, e)._3
         val l = getAddr()
 
-        _run(M + (l -> x), E + (id -> l), s)
+        runExpr(M + (l -> x), E + (id -> l), s)
       }
       case LETF(id, args, b, s) => {
-        _run(M, E + (id -> (args, b, E)), s)
+        runExpr(M, E + (id -> (args, b, E)), s)
       }
       case CALLV(id, args) => ???
       case CALLR(id, args) => ???
@@ -190,7 +166,7 @@ object KMINUS {
         val x = readInt()
 
         if(E(id) != E.empty){
-          val r = _run(M, E, ASSIGN(id, NUM(x)))
+          val r = runExpr(M, E, ASSIGN(id, NUM(x)))
           (r._1, r._2, Numv(x))
         } else {
           val l = getAddr()
@@ -198,16 +174,11 @@ object KMINUS {
         }
       }
       case WRITE(e) => {
-        val r = _run(M, E, e)
+        val r = runExpr(M, E, e)
         println(r._3)
         r
       }
     }
-  }
-
-  def run(M: Memory, E: Env, P: PROGRAM): Value = {
-    val e = _run(M, E, P)
-    e._3
   }
 }
 

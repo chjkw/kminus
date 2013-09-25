@@ -1,6 +1,7 @@
 package hw3
 
 import com.sun.corba.se.impl.io.TypeMismatchException
+import scala.annotation.tailrec
 
 /**
  * Created with IntelliJ IDEA.
@@ -38,42 +39,41 @@ case class ASSIGNF(r: EXP, id: KMINUS.ID, v: EXP) extends EXP
 case class READ(id: KMINUS.ID) extends EXP
 case class WRITE(e: EXP) extends EXP
 
+abstract class Value
+case object Unitv extends Value
+case class Numv(n: Int) extends Value
+case class Bool(b: Boolean) extends Value
+case class Recordv(r: KMINUS.ID => Int) extends Value
+
 object KMINUS {
   private var addr: Int = 1
   type Error = String
   type ID = Any
 
   type PROGRAM = EXP
-  type Memory = Map[Any, EXP]
-  type Env = Map[ID,  Any]
+  type Memory = Map[Any, Value]
+  type Env = Map[ID, Any]
 
-  val emptyMemory: Memory = Map.empty[Any, EXP]
+  val emptyMemory: Memory = Map.empty[Any, Value]
   val emptyEnv: Env = Map.empty[ID, Any]
 
   def getAddr() : Int = { this.addr+=1; this.addr }
 
-  def toVal(e: EXP): Int = {
-    e match {
-      case NUM(n) => n
-      case _ => 0
-    }
-  }
-
-  def _run(M: Memory, E: Env, P: PROGRAM): (Memory, Env, EXP) = {
+  def _run(M: Memory, E: Env, P: PROGRAM): (Memory, Env, Value) = {
     P match {
       case VAR(x) => (M, E, M(E(x)))
-      case TRUE => (M, E, TRUE)
-      case FALSE => (M, E, FALSE)
-      case UNIT => (M, E, UNIT)
-      case NUM(n) => (M, E, NUM(n))
+      case TRUE => (M, E, Bool(true))
+      case FALSE => (M, E, Bool(false))
+      case UNIT => (M, E, Unitv)
+      case NUM(n) => (M, E, Numv(n))
       case ADD(p1, p2) => {
         val r1 = _run(M, E, p1)
         val r2 = _run(r1._1, r1._2, p2)
 
         r1._3 match {
-          case NUM(n1) => {
+          case Numv(n1) => {
             r2._3 match {
-              case NUM(n2) => (r2._1, r2._2, NUM(n1 + n2))
+              case Numv(n2) => (r2._1, r2._2, Numv(n1 + n2))
             }
           }
           case _ => throw new TypeMismatchException
@@ -85,9 +85,9 @@ object KMINUS {
         val r2 = _run(r1._1, r1._2, p2)
 
         r1._3 match {
-          case NUM(n1) => {
+          case Numv(n1) => {
             r2._3 match {
-              case NUM(n2) => (r2._1, r2._2, NUM(n1 - n2))
+              case Numv(n2) => (r2._1, r2._2, Numv(n1 - n2))
             }
           }
           case _ => throw new TypeMismatchException
@@ -99,9 +99,9 @@ object KMINUS {
         val r2 = _run(r1._1, r1._2, p2)
 
         r1._3 match {
-          case NUM(n1) => {
+          case Numv(n1) => {
             r2._3 match {
-              case NUM(n2) => (r2._1, r2._2, NUM(n1 * n2))
+              case Numv(n2) => (r2._1, r2._2, Numv(n1 * n2))
             }
           }
           case _ => throw new TypeMismatchException
@@ -113,33 +113,36 @@ object KMINUS {
         val r2 = _run(r1._1, r1._2, p2)
 
         r1._3 match {
-          case NUM(n1) => {
+          case Numv(n1) => {
             r2._3 match {
-              case NUM(n2) => {
+              case Numv(n2) => {
                 if(n2 == 0) throw new ArithmeticException
-                else (r2._1, r2._2, NUM(n1 / n2))
+                else (r2._1, r2._2, Numv(n1 / n2))
               }
             }
           }
           case _ => throw new TypeMismatchException
         }
       }
-      case EQUAL(e1, e2) => if (run(M, E, e1) == run(M, E, e2)) (M, E, TRUE) else (M, E, FALSE)
+      case EQUAL(e1, e2) => if (run(M, E, e1) == run(M, E, e2)) (M, E, Bool(true)) else (M, E, Bool(false))
       case LESS(e1, e2) => {
         val r1 = _run(M, E, e1)
         val r2 = _run(r1._1, r1._2, e2)
 
         r1._3 match {
-          case NUM(n1) =>
+          case Numv(n1) =>
             r2._3 match {
-              case NUM(n2) => if(n1 < n2) (r2._1, r2._2, TRUE) else (r2._1, r2._2, FALSE)
+              case Numv(n2) => if(n1 < n2) (r2._1, r2._2, Bool(true)) else (r2._1, r2._2, Bool(false))
             }
           case _ => throw new TypeMismatchException
         }
       }
       case NOT(e) => {
         val r = _run(M, E, e)
-        if(r._3 == TRUE) (r._1, r._2, FALSE) else (r._1, r._2, TRUE)
+
+        r._3 match {
+          case Bool(b) => if(b) (r._1, r._2, Bool(false)) else (r._1, r._2, Bool(true))
+        }
       }
       case SEQ(e1, e2) => {
         val r = _run(M, E, e1)
@@ -148,26 +151,30 @@ object KMINUS {
       case IF(cond, t, e) => {
         val r = _run(M, E, cond)
         r._3 match {
-          case TRUE => _run(r._1, r._2, t)
-          case _ =>_run(r._1, r._2, e)
+          case Bool(b) => if (b == true) _run(r._1, r._2, t) else _run(r._1, r._2, e)
+          case _ => _run(r._1, r._2, e)
         }
       }
       case WHILE(cond, s) => {
         val m = _run(M, E, cond)
         m._3 match {
-          case TRUE => {
-            val r = _run(m._1, m._2, s)
-            _run(r._1, r._2, WHILE(cond, s))
+          case Bool(b) => {
+            if (b == true) {
+              val r = _run(m._1, m._2, s)
+              _run(r._1, r._2, WHILE(cond, s))
+            }
+            else
+              (m._1, m._2, Unitv)
           }
-          case _ => (m._1, m._2, UNIT)
+          case _ => (m._1, m._2, Unitv)
         }
       }
-      case ASSIGN(id, v) => (M.updated(E(id), NUM(run(M, E, v))), E, UNIT)
+      case ASSIGN(id, v) => (M.updated(E(id), _run(M, E, v)._3), E, Unitv)
       case LETV(id, e, s) => {
-        val x = run(M, E, e)
+        val x = _run(M, E, e)._3
         val l = getAddr()
 
-        _run(M + (l -> NUM(x)), E + (id -> l), s)
+        _run(M + (l -> x), E + (id -> l), s)
       }
       case LETF(id, args, b, s) => {
         _run(M, E + (id -> (args, b, E)), s)
@@ -177,31 +184,30 @@ object KMINUS {
       case RECORD(id, e) => ???
       case RECORDS(l) => ???
       case FIELD(e, id) => ???
-      case ASSIGNF(r, zid, v) => ???
+      case ASSIGNF(r, id, v) => ???
 
       case READ(id) => {
         val x = readInt()
 
         if(E(id) != E.empty){
           val r = _run(M, E, ASSIGN(id, NUM(x)))
-          (r._1, r._2, NUM(x))
+          (r._1, r._2, Numv(x))
         } else {
           val l = getAddr()
-          (M + (l -> NUM(x)), E + (id -> l), NUM(x))
+          (M + (l -> Numv(x)), E + (id -> l), Numv(x))
         }
       }
       case WRITE(e) => {
         val r = _run(M, E, e)
-        println(toVal(r._3))
+        println(r._3)
         r
       }
     }
   }
 
-  def run(M: Memory, E: Env, P: PROGRAM): Int = {
+  def run(M: Memory, E: Env, P: PROGRAM): Value = {
     val e = _run(M, E, P)
-
-    toVal(e._3)
+    e._3
   }
 }
 

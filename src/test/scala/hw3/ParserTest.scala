@@ -14,12 +14,12 @@ class ParserTest extends FunSuite with ShouldMatchers {
   test ("ParseFile fun.k Test") {
     val p = new Parser
 
-    println(p.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/fun.k-").get)
+    // println(p.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/fun.k-").get)
   }
 
   test("test1 test") {
     val p = new Parser
-    println(p.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/test1.k-").get)
+    // println(p.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/test1.k-").get)
   }
 
 }

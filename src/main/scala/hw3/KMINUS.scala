@@ -9,7 +9,6 @@ import com.sun.corba.se.impl.io.TypeMismatchException
  * Time: 오후 7:18
  */
 
-
 abstract class EXP
 case object TRUE extends EXP
 case object FALSE extends EXP
@@ -44,19 +43,31 @@ case class Numv(n: Int) extends Value
 case class Bool(b: Boolean) extends Value
 case class Recordv(r: KMINUS.ID => Int) extends Value
 
+abstract class EnvEntry
+case class Addr(addr: Int) extends EnvEntry
+case class Proc(params :List[KMINUS.ID], b: EXP, e: KMINUS.Env) extends EnvEntry
+
+object Addr {
+  private var addr = 1
+
+  def increase() : Addr = {
+    addr = addr + 1
+    Addr(addr)
+  }
+}
+
 object KMINUS {
-  private var addr: Int = 1
+  var addr: Addr = new Addr(1)
+
   type Error = String
-  type ID = Any
+  type ID = String
 
   type PROGRAM = EXP
-  type Memory = Map[Any, Value]
-  type Env = Map[ID, Any]
+  type Memory = Map[EnvEntry, Value]
+  type Env = Map[ID, EnvEntry]
 
-  val emptyMemory: Memory = Map.empty[Any, Value]
-  val emptyEnv: Env = Map.empty[ID, Any]
-
-  def getAddr() : Int = { this.addr+=1; this.addr }
+  val emptyMemory: Memory = Map.empty[EnvEntry, Value]
+  val emptyEnv: Env = Map.empty[ID, EnvEntry]
 
   def calc(M: Memory, E: Env, e1: EXP, e2: EXP, op: Char) : (Memory, Env, Value) = {
     val r1 = runExpr(M, E, e1)
@@ -148,15 +159,62 @@ object KMINUS {
       case ASSIGN(id, v) => (M.updated(E(id), runExpr(M, E, v)._3), E, Unitv)
       case LETV(id, e, s) => {
         val x = runExpr(M, E, e)._3
-        val l = getAddr()
+        val l = Addr.increase()
 
         runExpr(M + (l -> x), E + (id -> l), s)
       }
-      case LETF(id, args, b, s) => {
-        runExpr(M, E + (id -> (args, b, E)), s)
+      case LETF(id, params, b, s) => {
+        runExpr(M, E + (id -> new Proc(params, b, E)), s)
       }
-      case CALLV(id, args) => ???
-      case CALLR(id, args) => ???
+      case CALLV(id, args) =>
+      {
+        val f = E(id)
+
+        f match {
+          case Proc(params, b, e) => {
+            var env = collection.mutable.Map[KMINUS.ID, EnvEntry]()
+            var mem = collection.mutable.Map[EnvEntry, Value]()
+
+            // traverse params
+            for (l <- params.zip(args)) {
+              env += l._1 -> Addr.increase()
+              mem += env(l._1) -> run(M ++ mem, E, l._2)
+            }
+
+            // run the function body under the Memory and the Env
+            val r = runExpr(M ++ mem, E ++ e ++ env, b)
+
+            // return the value with the original Memory and Env
+            (r._1, E, r._3)
+          }
+          case _ => throw new TypeMismatchException
+        }
+      }
+
+      case CALLR(id, args) =>
+      {
+        val f = E(id)
+
+        f match {
+          case Proc(params, b, e) => {
+            var env = collection.mutable.Map[KMINUS.ID, EnvEntry]()
+            env = env ++ e
+            env = env ++ E
+
+            // traverse params and use the original address of each parameter
+            for (l <- params.zip(args)) {
+              env += l._1 -> E(l._2)
+            }
+
+            // run the function body under the Memory and the Env
+            val r = runExpr(M, E ++ env ++ e, b)
+
+            // return the value with the original Memory and Env
+            (r._1, E, r._3)
+          }
+          case _ => throw new TypeMismatchException
+        }
+      }
       case RECORD(id, e) => ???
       case RECORDS(l) => ???
       case FIELD(e, id) => ???
@@ -169,7 +227,7 @@ object KMINUS {
           val r = runExpr(M, E, ASSIGN(id, NUM(x)))
           (r._1, r._2, Numv(x))
         } else {
-          val l = getAddr()
+          val l = Addr.increase()
           (M + (l -> Numv(x)), E + (id -> l), Numv(x))
         }
       }

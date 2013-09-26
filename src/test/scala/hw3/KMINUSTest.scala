@@ -63,11 +63,18 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(3))
   }
 
-  ignore("fun test") {
+  test("callv test") {
     val parser = new Parser
-    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/fun.k-")
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/callv.k-")
 
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get)
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(2))
+  }
+
+  test("callr test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/callr.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(0))
   }
 
   test("if test") {

@@ -11,40 +11,44 @@ import org.scalatest.FunSuite
  */
 
 class KMINUSTest extends FunSuite with ShouldMatchers {
+  test("Add test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/add.k-")
 
-  test("3 ADD 5 test") {
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, ADD(NUM(2), NUM(3))) should be (Numv(5))
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(3))
   }
 
-  test("5 SUB 3 test") {
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, SUB(NUM(5), NUM(3))) should be (Numv(2))
+  test("Sub test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/sub.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(1))
   }
 
-  test("5 MUL 3 test") {
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, MUL(NUM(5), NUM(3))) should be (Numv(15))
+  test("Mul test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/mul.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(2))
   }
 
-  test("10 DIV 5 test") {
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, DIV(NUM(10), NUM(5))) should be (Numv(2))
+  test("Div test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/div.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(2))
   }
 
-  test("TRUE test") {
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, TRUE) should be (Bool(true))
-  }
+  test("Div by Zero test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/div_zero.k-")
 
-  test("Let x = 5 in write 5 test") {
-    val P = LETV("x", NUM(5), WRITE(VAR("x")))
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P) should be (Numv(5))
-  }
-
-  test("VAR(x) test") {
-    val P = SEQ(SEQ(LETV("x", NUM(5), WRITE(VAR("x"))), ASSIGN("x", NUM(10))), WRITE(VAR("x")))
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P) should be (Numv(10))
+    evaluating {KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get)} should produce [ArithmeticException]
   }
 
   test("WHILE test") {
     val parser = new Parser
-    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/test3.k-")
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/while.k-")
 
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Unitv)
   }
@@ -56,28 +60,21 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(2))
   }
 
-  test("toy test") {
-    val parser = new Parser
-    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/test1.k-")
-
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(3))
-  }
-
-  test("callv test") {
+  test("Call by Value test") {
     val parser = new Parser
     val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/callv.k-")
 
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(2))
   }
 
-  test("callr test") {
+  test("Call by Reference test") {
     val parser = new Parser
     val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/callr.k-")
 
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(0))
   }
 
-  test("if test") {
+  test("IF test") {
     val parser = new Parser
     val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/if.k-")
 

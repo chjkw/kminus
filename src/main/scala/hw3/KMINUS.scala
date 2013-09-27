@@ -233,7 +233,10 @@ object KMINUS {
       }
       case WRITE(e) => {
         val r = runExpr(M, E, e)
-        println(r._3)
+        r._3 match {
+          case Numv(n) => println(n)
+          case _ => println()
+        }
         r
       }
     }

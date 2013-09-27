@@ -73,21 +73,17 @@ object KMINUS {
     val r1 = runExpr(M, E, e1)
     val r2 = runExpr(r1._1, r1._2, e2)
 
-    r1._3 match {
-      case Numv(n1) => {
-        r2._3 match {
-          case Numv(n2) => {
-            op match {
-              case '+' => (r2._1, r2._2, Numv(n1 + n2))
-              case '-' => (r2._1, r2._2, Numv(n1 - n2))
-              case '*' => (r2._1, r2._2, Numv(n1 * n2))
-              case '/' => {
-                if(n2 == 0)
-                  throw new ArithmeticException
-                else
-                  (r2._1, r2._2, Numv(n1 / n2))
-              }
-            }
+    (r1._3,r2._3) match {
+      case (Numv(n1),Numv(n2)) => {
+        op match {
+          case '+' => (r2._1, r2._2, Numv(n1 + n2))
+          case '-' => (r2._1, r2._2, Numv(n1 - n2))
+          case '*' => (r2._1, r2._2, Numv(n1 * n2))
+          case '/' => {
+            if(n2 == 0)
+              throw new ArithmeticException
+            else
+              (r2._1, r2._2, Numv(n1 / n2))
           }
         }
       }
@@ -116,11 +112,8 @@ object KMINUS {
         val r1 = runExpr(M, E, e1)
         val r2 = runExpr(r1._1, r1._2, e2)
 
-        r1._3 match {
-          case Numv(n1) =>
-            r2._3 match {
-              case Numv(n2) => if(n1 < n2) (r2._1, r2._2, Bool(true)) else (r2._1, r2._2, Bool(false))
-            }
+        (r1._3, r2._3) match {
+          case (Numv(n1), Numv(n2)) => if(n1 < n2) (r2._1, r2._2, Bool(true)) else (r2._1, r2._2, Bool(false))
           case _ => throw new TypeMismatchException
         }
       }
@@ -129,6 +122,7 @@ object KMINUS {
 
         r._3 match {
           case Bool(b) => if(b) (r._1, r._2, Bool(false)) else (r._1, r._2, Bool(true))
+          case _ => throw new TypeMismatchException
         }
       }
       case SEQ(e1, e2) => {
@@ -145,13 +139,9 @@ object KMINUS {
       case WHILE(cond, s) => {
         val m = runExpr(M, E, cond)
         m._3 match {
-          case Bool(b) => {
-            if (b == true) {
-              val r = runExpr(m._1, m._2, s)
-              runExpr(r._1, r._2, WHILE(cond, s))
-            }
-            else
-              (m._1, m._2, Unitv)
+          case Bool(b) if b == true => {
+            val r = runExpr(m._1, m._2, s)
+            runExpr(r._1, r._2, WHILE(cond, s))
           }
           case _ => (m._1, m._2, Unitv)
         }
@@ -172,15 +162,13 @@ object KMINUS {
 
         f match {
           case Proc(params, b, e) => {
-            var env = collection.mutable.Map[KMINUS.ID, EnvEntry]()
-            var mem = collection.mutable.Map[EnvEntry, Value]()
-
             // traverse params
-            for (l <- params.zip(args)) {
-              env += l._1 -> Addr.increase()
-              mem += env(l._1) -> run(M ++ mem, E, l._2)
+            val (mem,env) = params.zip(args).foldLeft(M,E) {
+              case ((m,e),l) =>
+                val env = e + (l._1 -> Addr.increase())
+                val mem = m + (env(l._1) -> run(M ++ m, E, l._2))
+                (mem,env)
             }
-
             // run the function body under the Memory and the Env
             val r = runExpr(M ++ mem, E ++ e ++ env, b)
 
@@ -197,13 +185,9 @@ object KMINUS {
 
         f match {
           case Proc(params, b, e) => {
-            var env = collection.mutable.Map[KMINUS.ID, EnvEntry]()
-            env = env ++ e
-            env = env ++ E
-
             // traverse params and use the original address of each parameter
-            for (l <- params.zip(args)) {
-              env += l._1 -> E(l._2)
+            val env = params.zip(args).foldLeft(e ++ E) {
+              case(env, l) => env + (l._1 -> E(l._2))
             }
 
             // run the function body under the Memory and the Env

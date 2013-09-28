@@ -1,0 +1,8 @@
+(* rec *)
+let tree := { left := {}, v := 0, right := {}}
+in 
+ tree.left := 1; tree.right := { left := {}, v := 2, right := 3};
+
+ write tree.right.right
+  
+

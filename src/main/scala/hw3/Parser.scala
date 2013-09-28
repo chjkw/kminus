@@ -119,14 +119,14 @@ class Parser extends JavaTokenParsers with PackratParsers {
   /** Rule for a record list expression */
   lazy val recordListExpression: PackratParser[EXP] = {
     "{"~>repsep(singleRecordExpression, ",")<~"}" ^^ {
-      case rs => RECORDS(rs)
+      case rs => RECORD(rs)
     } | recordLookupExpression
   }
 
   /** Rule for a single record expression */
-  lazy val singleRecordExpression: PackratParser[RECORD] = {
+  lazy val singleRecordExpression: PackratParser[(KMINUS.ID, EXP)] = {
     identifier~":="~expression ^^ {
-      case i~_~e => RECORD(i, e)
+      case i~_~e => (i, e)
     }
   }
 
@@ -134,6 +134,13 @@ class Parser extends JavaTokenParsers with PackratParsers {
   lazy val recordLookupExpression: PackratParser[EXP] = {
     recordLookupExpression~"."~identifier ^^ {
       case e~_~i => FIELD(e, i)
+    } | fieldAssignmentExpression
+  }
+
+  /** Rule for a record lookup expression */
+  lazy val fieldAssignmentExpression: PackratParser[EXP] = {
+    recordLookupExpression~":="~assignmentExpression ^^ {
+      case f~_~e => f match { case FIELD(r, i) => ASSIGNF(r, i, e) }
     } | primaryExpression
   }
 

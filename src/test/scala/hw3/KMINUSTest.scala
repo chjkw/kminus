@@ -80,4 +80,18 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
 
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get)
   }
+
+  test("Record Creation test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/rec.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(265))
+  }
+
+  test("Assign to Field test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/assignf.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(3))
+  }
 }

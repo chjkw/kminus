@@ -29,8 +29,7 @@ case class LETV(id: KMINUS.ID, e: EXP, s:EXP) extends EXP
 case class LETF(id: KMINUS.ID, args: List[KMINUS.ID], b: EXP, s: EXP) extends EXP
 case class CALLV(id: KMINUS.ID, args: List[EXP]) extends EXP
 case class CALLR(id: KMINUS.ID, args: List[KMINUS.ID]) extends EXP
-case class RECORD(id: KMINUS.ID, e: EXP) extends EXP
-case class RECORDS(l: List[RECORD]) extends EXP
+case class RECORD(l: List[(KMINUS.ID, EXP)]) extends EXP
 case class FIELD(e: EXP, id: KMINUS.ID) extends EXP
 case class ASSIGN(id: KMINUS.ID, v: EXP) extends EXP
 case class ASSIGNF(r: EXP, id: KMINUS.ID, v: EXP) extends EXP
@@ -41,7 +40,7 @@ abstract class Value
 case object Unitv extends Value
 case class Numv(n: Int) extends Value
 case class Bool(b: Boolean) extends Value
-case class Recordv(r: KMINUS.ID => Int) extends Value
+case class Recordv(r: Map[KMINUS.ID, EnvEntry]) extends Value
 
 abstract class EnvEntry
 case class Addr(addr: Int) extends EnvEntry
@@ -148,10 +147,10 @@ object KMINUS {
       }
       case ASSIGN(id, v) => (M.updated(E(id), runExpr(M, E, v)._3), E, Unitv)
       case LETV(id, e, s) => {
-        val x = runExpr(M, E, e)._3
+        val r = runExpr(M, E, e)
         val l = Addr.increase()
 
-        runExpr(M + (l -> x), E + (id -> l), s)
+        runExpr(M ++ r._1 + (l -> r._3), E + (id -> l), s)
       }
       case LETF(id, params, b, s) => {
         runExpr(M, E + (id -> new Proc(params, b, E)), s)
@@ -199,10 +198,41 @@ object KMINUS {
           case _ => throw new TypeMismatchException
         }
       }
-      case RECORD(id, e) => ???
-      case RECORDS(l) => ???
-      case FIELD(e, id) => ???
-      case ASSIGNF(r, id, v) => ???
+//      case RECORD(id, e) => {
+//        val l = Addr.increase()
+//        val r = runExpr(M, E, e)
+//
+//        (M + (l -> r._3), E + (id -> l), )
+//
+//      }
+      case RECORD(rs) => {
+        val (mem, env) = rs.foldLeft(M, emptyEnv) {
+          case ((m, e), f) =>
+            val r = runExpr(m, E, f._2)
+            val env = e + (f._1 -> Addr.increase())
+            val mem = m + (env(f._1) -> r._3)
+
+            (mem, env)
+        }
+        (mem, E, Recordv(env))
+      }
+      case FIELD(e, id) => {
+        val r = runExpr(M, E, e)
+
+        r._3 match {
+          case Recordv(rs) => (r._1, E, M(rs(id)))
+          case _ => throw new TypeMismatchException
+        }
+      }
+      case ASSIGNF(e, id, v) => {
+        val e1 = runExpr(M, E, e)
+        val v1 = runExpr(e1._1, E, v)
+
+        e1._3 match {
+          case Recordv(rs) => (v1._1.updated(rs(id), v1._3), E, v1._3)
+          case _ => throw new TypeMismatchException
+        }
+      }
 
       case READ(id) => {
         val x = readInt()
@@ -210,10 +240,9 @@ object KMINUS {
         if(E(id) != E.empty){
           val r = runExpr(M, E, ASSIGN(id, NUM(x)))
           (r._1, r._2, Numv(x))
-        } else {
-          val l = Addr.increase()
-          (M + (l -> Numv(x)), E + (id -> l), Numv(x))
         }
+        else
+          throw new IllegalAccessException
       }
       case WRITE(e) => {
         val r = runExpr(M, E, e)

@@ -94,4 +94,11 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
 
     KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(3))
   }
+
+  test("countChange test") {
+    val parser = new Parser
+    val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/munch.k-")
+
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(157))
+  }
 }

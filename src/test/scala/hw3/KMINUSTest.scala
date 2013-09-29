@@ -99,6 +99,6 @@ class KMINUSTest extends FunSuite with ShouldMatchers {
     val parser = new Parser
     val P = parser.parseFile("/Users/chjkw/dev/scala/pl/hw/hw3/examples/munch.k-")
 
-    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Numv(157))
+    KMINUS.run(KMINUS.emptyMemory, KMINUS.emptyEnv, P.get) should be (Bool(true))
   }
 }

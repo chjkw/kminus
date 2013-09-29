@@ -39,5 +39,4 @@ let proc munch10000 (n) =
   if n < 10000 then munch5000(n)
   else munch5000(n) + munch10000(n - 10000)
 in
-
-munch(500)
+if munch(500) = 157 then true else false

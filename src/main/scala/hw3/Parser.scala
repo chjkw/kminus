@@ -9,8 +9,11 @@ class ParserException(msg: String) extends Exception(msg)
  * Parser for K- language.
  * Basically uses Scala parser combinator and Packrat parser
  *
- * @author jwyoon
+ * @author jwyoon, jkw
  * @since 20130820
+ *
+ * 1. first version written by jwyoon
+ * 2. jkw added fileld assign syntax.
  */
 class Parser extends JavaTokenParsers with PackratParsers {
 

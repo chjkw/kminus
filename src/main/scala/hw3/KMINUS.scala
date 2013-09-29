@@ -198,13 +198,6 @@ object KMINUS {
           case _ => throw new TypeMismatchException
         }
       }
-//      case RECORD(id, e) => {
-//        val l = Addr.increase()
-//        val r = runExpr(M, E, e)
-//
-//        (M + (l -> r._3), E + (id -> l), )
-//
-//      }
       case RECORD(rs) => {
         val (mem, env) = rs.foldLeft(M, emptyEnv) {
           case ((m, e), f) =>
